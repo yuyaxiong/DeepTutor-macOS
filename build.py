@@ -11,6 +11,7 @@ No Python or Node.js installation is required on the target Mac.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -517,6 +518,19 @@ def assemble_app(target: str, python_runtime: Path, node_bin: Path, icon: Path, 
     (contents / "Info.plist").write_text(plist, encoding="utf-8")
 
     compile_launcher(target, macos / "DeepTutor")
+
+    digest = hashlib.sha256()
+    digest.update((macos / "DeepTutor").read_bytes())
+    digest.update((resources / "bootstrap.py").read_bytes())
+    digest.update((contents / "Info.plist").read_bytes())
+    (resources / "build-info.json").write_text(
+        json.dumps(
+            {"app_version": app_version, "build_id": digest.hexdigest()[:16]},
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     run(["codesign", "--force", "--sign", "-", str(app)])
     run(["codesign", "--verify", "--strict", str(app)])
