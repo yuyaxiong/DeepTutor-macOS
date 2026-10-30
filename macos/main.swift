@@ -16,6 +16,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     private var activityToken: NSObjectProtocol?
     private var appVersion = ""
     private var buildId = ""
+    private var healthTimer: Timer?
+    private var healthFailures = 0
+    private var autoRestarts = 0
+    private var lastAutoRestart = Date.distantPast
+    private var isHealthProbing = false
+    private var isRestarting = false
+    private var isTerminating = false
+    private var runtimeBackendPort: Int?
 
     private let supportDirectory: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -58,8 +66,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         false
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if isTerminating {
+            return .terminateNow
+        }
+        guard let process = backendProcess, process.isRunning else {
+            return .terminateNow
+        }
+        isTerminating = true
+        stopHealthMonitoring()
+        process.terminate()
+        appendLog("\n--- waiting up to 15s for backend shutdown ---\n")
+        DispatchQueue.global(qos: .userInitiated).async {
+            let deadline = Date().addingTimeInterval(15)
+            while process.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+            if process.isRunning {
+                kill(process.processIdentifier, SIGKILL)
+            }
+            DispatchQueue.main.async {
+                NSApp.reply(toApplicationShouldTerminate: true)
+            }
+        }
+        return .terminateLater
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
-        stopBackend()
+        stopHealthMonitoring()
+        startupTimer?.invalidate()
         if let token = activityToken {
             ProcessInfo.processInfo.endActivity(token)
             activityToken = nil
@@ -220,12 +255,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
     }
 
-    private func stopBackend() {
+    private func stopBackend(grace: TimeInterval = 3.0) {
         startupTimer?.invalidate()
         startupTimer = nil
         guard let process = backendProcess, process.isRunning else { return }
         process.terminate()
-        let deadline = Date().addingTimeInterval(3)
+        let deadline = Date().addingTimeInterval(grace)
         while process.isRunning && Date() < deadline {
             RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
         }
@@ -235,7 +270,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     private func backendDidExit(status: Int32) {
-        guard !hasLoaded else { return }
+        guard !hasLoaded, !isRestarting, !isTerminating else { return }
         if let url = runtimeURL ?? readRuntimeURL() {
             probe(url)
             return
@@ -267,15 +302,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         probe(url)
     }
 
-    private func readRuntimeURL() -> URL? {
+    private func readRuntimeObject() -> [String: Any]? {
         guard
             let data = try? Data(contentsOf: runtimeFile),
             let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let raw = object["url"] as? String,
             let version = object["app_version"] as? String,
             let build = object["build_id"] as? String,
             version == appVersion,
-            build == buildId,
+            build == buildId
+        else {
+            return nil
+        }
+        return object
+    }
+
+    private func readRuntimeURL() -> URL? {
+        guard
+            let object = readRuntimeObject(),
+            let raw = object["url"] as? String,
             let url = URL(string: raw)
         else {
             return nil
@@ -303,11 +347,109 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     private func loadUI(_ url: URL) {
         guard !hasLoaded else { return }
         hasLoaded = true
+        isRestarting = false
         runtimeURL = url
+        if let object = readRuntimeObject(), let port = object["backend_port"] as? Int {
+            runtimeBackendPort = port
+        }
         startupTimer?.invalidate()
         webView.load(URLRequest(url: url.appendingPathComponent("chat")))
         window.title = "DeepTutor"
         appendLog("\n--- web ready at \(url.absoluteString) ---\n")
+        startHealthMonitoring()
+    }
+
+    private func startHealthMonitoring() {
+        stopHealthMonitoring()
+        healthFailures = 0
+        healthTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            self?.checkHealth()
+        }
+    }
+
+    private func stopHealthMonitoring() {
+        healthTimer?.invalidate()
+        healthTimer = nil
+        isHealthProbing = false
+    }
+
+    private func checkHealth() {
+        guard
+            hasLoaded,
+            !isRestarting,
+            !isHealthProbing,
+            let frontendURL = runtimeURL,
+            let backendPort = runtimeBackendPort,
+            let backendURL = URL(string: "http://127.0.0.1:\(backendPort)/health/ready")
+        else {
+            return
+        }
+        isHealthProbing = true
+        let group = DispatchGroup()
+        var frontendOK = false
+        var backendOK = false
+
+        group.enter()
+        var frontendRequest = URLRequest(url: frontendURL.appendingPathComponent("chat"))
+        frontendRequest.timeoutInterval = 3
+        frontendRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        URLSession.shared.dataTask(with: frontendRequest) { _, response, _ in
+            frontendOK = (response as? HTTPURLResponse).map { (200...399).contains($0.statusCode) } ?? false
+            group.leave()
+        }.resume()
+
+        group.enter()
+        var backendRequest = URLRequest(url: backendURL)
+        backendRequest.timeoutInterval = 3
+        backendRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        URLSession.shared.dataTask(with: backendRequest) { _, response, _ in
+            backendOK = (response as? HTTPURLResponse).map { (200...399).contains($0.statusCode) } ?? false
+            group.leave()
+        }.resume()
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self, self.healthTimer != nil else { return }
+            self.isHealthProbing = false
+            if frontendOK && backendOK {
+                self.healthFailures = 0
+                if Date().timeIntervalSince(self.lastAutoRestart) > 300 {
+                    self.autoRestarts = 0
+                }
+            } else {
+                self.healthFailures += 1
+                self.appendLog(
+                    "\n--- health check failed (\(self.healthFailures)) "
+                    + "frontend=\(frontendOK) backend=\(backendOK) ---\n"
+                )
+                if self.healthFailures >= 3 {
+                    self.handleHealthFailure()
+                }
+            }
+        }
+    }
+
+    private func handleHealthFailure() {
+        stopHealthMonitoring()
+        guard !isRestarting else { return }
+        if autoRestarts >= 2 {
+            failStartup("本地服务多次异常，已停止自动重启。\n请从菜单栏选择“重启服务”。")
+            return
+        }
+        autoRestarts += 1
+        lastAutoRestart = Date()
+        appendLog("\n--- auto restart \(autoRestarts) ---\n")
+        isRestarting = true
+        hasLoaded = false
+        runtimeURL = nil
+        runtimeBackendPort = nil
+        isProbing = false
+        stopBackend(grace: 3.0)
+        backendProcess = nil
+        showStartingPage()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.startBackend()
+            self?.beginStartupPolling()
+        }
     }
 
     private func showStartingPage() {
@@ -352,6 +494,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     private func failStartup(_ message: String) {
+        stopHealthMonitoring()
+        isRestarting = false
         startupTimer?.invalidate()
         startupTimer = nil
         let escaped = message
@@ -434,10 +578,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     @objc private func restartBackend(_ sender: Any?) {
+        autoRestarts = 0
+        lastAutoRestart = .distantPast
+        isRestarting = true
         hasLoaded = false
         runtimeURL = nil
+        runtimeBackendPort = nil
         isProbing = false
-        stopBackend()
+        stopHealthMonitoring()
+        stopBackend(grace: 3.0)
         backendProcess = nil
         showStartingPage()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
