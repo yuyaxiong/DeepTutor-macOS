@@ -8,10 +8,10 @@
 
 ## 直接下载
 
-- [Apple Silicon 安装包](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r2/DeepTutor-1.6.15-arm64.dmg)
-- [Intel 安装包](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r2/DeepTutor-1.6.15-x86_64.dmg)
+- [Apple Silicon 安装包](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r3/DeepTutor-1.6.15-arm64.dmg)
+- [Intel 安装包](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r3/DeepTutor-1.6.15-x86_64.dmg)
 
-`r2` 修复了 API Key 输入框无法使用 Cmd+C/Cmd+V 的问题。
+`r2` 修复了 API Key 输入框的 Cmd+C/Cmd+V。`r3` 增加版本/构建号校验、前后端健康检查和旧实例清理。
 
 需要自行构建时，按下面的步骤操作。
 
