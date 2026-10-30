@@ -11,10 +11,10 @@ native Swift `WKWebView` window with a menu bar.
 
 ## Download
 
-- [Apple Silicon DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r3/DeepTutor-1.6.15-arm64.dmg)
-- [Intel DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r3/DeepTutor-1.6.15-x86_64.dmg)
+- [Apple Silicon DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r4/DeepTutor-1.6.15-arm64.dmg)
+- [Intel DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r4/DeepTutor-1.6.15-x86_64.dmg)
 
-`r2` fixed Cmd+C/Cmd+V in API key fields. `r3` adds version/build validation, frontend and backend health checks, and stale instance cleanup.
+`r2` fixed Cmd+C/Cmd+V in API key fields. `r3` added version/build validation and stale instance cleanup. `r4` adds health monitoring with automatic restart and a 15s graceful shutdown.
 
 Or build locally from source with the steps below.
 
