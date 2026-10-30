@@ -9,6 +9,13 @@ The result needs no Python or Node.js on the target Mac. It bundles a portable
 CPython 3.11 runtime, Node.js 22, the packaged Next.js standalone server, and a
 native Swift `WKWebView` window with a menu bar.
 
+## Download
+
+- [Apple Silicon DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15/DeepTutor-1.6.15-arm64.dmg)
+- [Intel DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15/DeepTutor-1.6.15-x86_64.dmg)
+
+Or build locally from source with the steps below.
+
 ## What it produces
 
 - `DeepTutor-<version>-arm64.dmg` for Apple Silicon

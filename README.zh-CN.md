@@ -6,6 +6,13 @@
 
 产物不需要目标 Mac 安装 Python 或 Node.js。应用自带便携 CPython 3.11、Node.js 22、Next.js 独立服务，以及原生 Swift `WKWebView` 窗口和菜单栏。
 
+## 直接下载
+
+- [Apple Silicon 安装包](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15/DeepTutor-1.6.15-arm64.dmg)
+- [Intel 安装包](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15/DeepTutor-1.6.15-x86_64.dmg)
+
+需要自行构建时，按下面的步骤操作。
+
 ## 构建产物
 
 - `DeepTutor-<版本>-arm64.dmg`：Apple Silicon
