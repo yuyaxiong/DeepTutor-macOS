@@ -1,5 +1,7 @@
 # DeepTutor macOS Packager
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 Build a self-contained `DeepTutor.app` and `.dmg` from the upstream
 [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) repository.
 
