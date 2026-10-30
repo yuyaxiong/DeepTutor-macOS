@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     private var startupDeadline = Date()
     private var logHandle: FileHandle?
     private var activityToken: NSObjectProtocol?
+    private var appVersion = ""
+    private var buildId = ""
 
     private let supportDirectory: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -37,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
+        loadBuildInfo()
         activityToken = ProcessInfo.processInfo.beginActivity(
             options: [.userInitiated, .idleSystemSleepDisabled, .automaticTerminationDisabled],
             reason: "DeepTutor local service"
@@ -269,6 +272,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             let data = try? Data(contentsOf: runtimeFile),
             let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let raw = object["url"] as? String,
+            let version = object["app_version"] as? String,
+            let build = object["build_id"] as? String,
+            version == appVersion,
+            build == buildId,
             let url = URL(string: raw)
         else {
             return nil
@@ -372,6 +379,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     private func appendLog(_ text: String) {
         guard let handle = logHandle else { return }
         try? handle.write(contentsOf: Data(text.utf8))
+    }
+
+    private func loadBuildInfo() {
+        guard
+            let resources = Bundle.main.resourceURL,
+            let data = try? Data(contentsOf: resources.appendingPathComponent("build-info.json")),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+            return
+        }
+        appVersion = object["app_version"] as? String ?? ""
+        buildId = object["build_id"] as? String ?? ""
     }
 
     private func showFatal(_ message: String) {
