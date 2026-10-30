@@ -11,8 +11,10 @@ native Swift `WKWebView` window with a menu bar.
 
 ## Download
 
-- [Apple Silicon DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15/DeepTutor-1.6.15-arm64.dmg)
-- [Intel DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15/DeepTutor-1.6.15-x86_64.dmg)
+- [Apple Silicon DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r2/DeepTutor-1.6.15-arm64.dmg)
+- [Intel DMG](https://github.com/yuyaxiong/DeepTutor-macOS/releases/download/v1.6.15-r2/DeepTutor-1.6.15-x86_64.dmg)
+
+`r2` fixes Cmd+C/Cmd+V in API key fields.
 
 Or build locally from source with the steps below.
 

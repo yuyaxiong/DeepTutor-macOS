@@ -109,7 +109,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         appMenu.addItem(NSMenuItem.separator())
         addMenuItem(appMenu, "退出 DeepTutor", #selector(quitApp(_:)), "q")
         appMenuItem.submenu = appMenu
+
+        let editMenuItem = NSMenuItem()
+        mainMenu.addItem(editMenuItem)
+        let editMenu = NSMenu(title: "编辑")
+        addResponderMenuItem(editMenu, "撤销", Selector(("undo:")), "z")
+        addResponderMenuItem(editMenu, "重做", Selector(("redo:")), "Z")
+        editMenu.addItem(NSMenuItem.separator())
+        addResponderMenuItem(editMenu, "剪切", #selector(NSText.cut(_:)), "x")
+        addResponderMenuItem(editMenu, "复制", #selector(NSText.copy(_:)), "c")
+        addResponderMenuItem(editMenu, "粘贴", #selector(NSText.paste(_:)), "v")
+        addResponderMenuItem(editMenu, "全选", #selector(NSText.selectAll(_:)), "a")
+        editMenuItem.submenu = editMenu
+
         NSApp.mainMenu = mainMenu
+    }
+
+    private func addResponderMenuItem(_ menu: NSMenu, _ title: String, _ action: Selector, _ key: String) {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.target = nil
+        menu.addItem(item)
     }
 
     private func buildStatusItem() {
