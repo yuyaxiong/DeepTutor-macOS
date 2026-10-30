@@ -50,6 +50,16 @@ Outputs are written to `dist/`.
 | `--output-dir` | DMG output directory. Default `dist/`. |
 | `--clean` | Remove `build/` before starting. |
 
+## Mirrors
+
+The defaults use Tsinghua mirrors for Node.js and PyPI. Override them with:
+
+```bash
+export DEEPTUTOR_NODE_MIRROR="https://nodejs.org/dist"
+export DEEPTUTOR_PYPI_INDEX="https://pypi.org/simple"
+export DEEPTUTOR_PYPI_HOST="pypi.org"
+```
+
 ## How it works
 
 1. Clone or update `HKUDS/DeepTutor` at the requested ref under `build/upstream/DeepTutor`.

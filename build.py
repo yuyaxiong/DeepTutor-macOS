@@ -34,11 +34,17 @@ DIST_DIR = PACKAGER_ROOT / "dist"
 UPSTREAM_URL = "https://github.com/HKUDS/DeepTutor.git"
 DEFAULT_REF = "v1.6.15"
 NODE_VERSION = "22.23.4"
-NODE_MIRROR = "https://mirrors.tuna.tsinghua.edu.cn/nodejs-release"
+NODE_MIRROR = os.getenv(
+    "DEEPTUTOR_NODE_MIRROR",
+    "https://mirrors.tuna.tsinghua.edu.cn/nodejs-release",
+)
 PYTHON_RELEASE = "20261026"
 PYTHON_VERSION = "3.11.18"
-PYPI_MIRROR = "https://pypi.tuna.tsinghua.edu.cn/simple"
-PYPI_TRUSTED_HOST = "pypi.tuna.tsinghua.edu.cn"
+PYPI_MIRROR = os.getenv(
+    "DEEPTUTOR_PYPI_INDEX",
+    "https://pypi.tuna.tsinghua.edu.cn/simple",
+)
+PYPI_TRUSTED_HOST = os.getenv("DEEPTUTOR_PYPI_HOST", "pypi.tuna.tsinghua.edu.cn")
 ARCH_ASSET = {"arm64": "aarch64", "x86_64": "x86_64"}
 NODE_ASSET = {"arm64": "arm64", "x86_64": "x64"}
 
